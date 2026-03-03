@@ -145,21 +145,26 @@
         cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
     });
 
-    async function connectWallet() {
-        if (!window.keplr) {
-            alert("Please install Keplr extension");
-            return;
-        }
-
-        await window.keplr.enable(chainId);
-        const offlineSigner = window.getOfflineSigner(chainId);
-        const accounts = await offlineSigner.getAccounts();
-
-        document.getElementById("walletAddress").innerText =
-            "Connected: " + accounts[0].address;
-
-        window.userAddress = accounts[0].address;
+async function connectWallet() {
+    if (!window.keplr) {
+        alert("Please install Keplr extension");
+        return;
     }
+
+    await window.keplr.enable(chainId);
+    const offlineSigner = window.getOfflineSigner(chainId);
+    const accounts = await offlineSigner.getAccounts();
+
+    window.userAddress = accounts[0].address;
+
+    // Change button text
+    const connectBtn = document.querySelector("button[onclick='connectWallet()']");
+    connectBtn.innerText = "Wallet Connected ✅";
+    connectBtn.style.background = "#38a169"; // green
+
+    document.getElementById("walletAddress").innerText =
+        "Connected: " + accounts[0].address;
+}
 
     async function payAndConvert() {
         if (!window.userAddress) {
@@ -237,6 +242,7 @@
 
 </body>
 </html>
+
 
 
 
