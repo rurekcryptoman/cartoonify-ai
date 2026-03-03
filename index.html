@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cartoonify AI</title>
+    <title>Cartoonify AI - Web3</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://unpkg.com/@cosmjs/stargate/build/index.js"></script>
 
     <style>
         body {
@@ -19,7 +21,7 @@
             background: white;
             padding: 30px;
             border-radius: 15px;
-            width: 400px;
+            width: 420px;
             text-align: center;
             box-shadow: 0 15px 40px rgba(0,0,0,0.2);
         }
@@ -27,7 +29,7 @@
         h1 { margin-bottom: 10px; }
 
         select, input, button {
-            margin-top: 15px;
+            margin-top: 12px;
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -54,6 +56,13 @@
             border-radius: 10px;
         }
 
+        #cartoon {
+            position:absolute;
+            top:0;
+            left:0;
+            clip-path: inset(0 50% 0 0);
+        }
+
         .slider {
             width: 100%;
             margin-top: 10px;
@@ -74,6 +83,13 @@
         #downloadBtn:hover {
             background: #2f855a;
         }
+
+        #walletAddress {
+            font-size: 12px;
+            margin-top: 5px;
+            color: gray;
+            word-break: break-all;
+        }
     </style>
 </head>
 
@@ -82,30 +98,31 @@
 <div class="card">
     <h1>Cartoonify AI</h1>
 
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="walletAddress"></p>
+
     <input type="file" id="upload" accept="image/*">
 
-    <select id="style">
-        <option value="flat">Flat Cartoon</option>
-        <option value="anime">Anime Style</option>
-        <option value="comic">Comic Book</option>
-    </select>
-
-    <button onclick="convertImage()">Convert to Cartoon</button>
+    <button onclick="payAndConvert()">Pay & Convert (0.1 ARAI)</button>
 
     <div class="loader" id="loader">Processing...</div>
 
     <div class="image-container">
         <img id="original">
-        <img id="cartoon" style="position:absolute; top:0; left:0; clip-path: inset(0 50% 0 0);">
+        <img id="cartoon">
     </div>
 
     <input type="range" min="0" max="100" value="50" class="slider" id="slider">
 
     <button id="downloadBtn" onclick="downloadImage()">Download Cartoon</button>
-
 </div>
 
 <script>
+    const chainId = "raitestnet_77701-1"; // confirm if different
+    const recipient = "YOUR_WALLET_ADDRESS"; // replace with your testnet wallet
+    const amount = "100000"; // 0.1 ARAI (6 decimals assumed)
+    const rpcEndpoint = "YOUR_RPC_ENDPOINT"; // replace with real RPC
+
     const upload = document.getElementById("upload");
     const original = document.getElementById("original");
     const cartoon = document.getElementById("cartoon");
@@ -124,18 +141,75 @@
         reader.readAsDataURL(file);
     });
 
-    function convertImage() {
-        loader.style.display = "block";
-        setTimeout(() => {
-            loader.style.display = "none";
-            cartoon.src = original.src; // fake cartoon result
-            downloadBtn.style.display = "block";
-        }, 2000);
-    }
-
     slider.addEventListener("input", function() {
         cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
     });
+
+    async function connectWallet() {
+        if (!window.keplr) {
+            alert("Please install Keplr extension");
+            return;
+        }
+
+        await window.keplr.enable(chainId);
+        const offlineSigner = window.getOfflineSigner(chainId);
+        const accounts = await offlineSigner.getAccounts();
+
+        document.getElementById("walletAddress").innerText =
+            "Connected: " + accounts[0].address;
+
+        window.userAddress = accounts[0].address;
+    }
+
+    async function payAndConvert() {
+        if (!window.userAddress) {
+            alert("Connect wallet first!");
+            return;
+        }
+
+        const { SigningStargateClient } = cosmjs;
+
+        const offlineSigner = window.getOfflineSigner(chainId);
+        const client = await SigningStargateClient.connectWithSigner(
+            rpcEndpoint,
+            offlineSigner
+        );
+
+        const fee = {
+            amount: [{ denom: "arai", amount: "5000" }],
+            gas: "200000",
+        };
+
+        try {
+            const result = await client.sendTokens(
+                window.userAddress,
+                recipient,
+                [{ denom: "arai", amount: amount }],
+                fee,
+                "Cartoon conversion payment"
+            );
+
+            if (result.code === 0) {
+                alert("Transaction successful! 🎉");
+                convertImage();
+            } else {
+                alert("Transaction failed");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Transaction rejected");
+        }
+    }
+
+    function convertImage() {
+        loader.style.display = "block";
+
+        setTimeout(() => {
+            loader.style.display = "none";
+            cartoon.src = original.src; // fake cartoon result for now
+            downloadBtn.style.display = "block";
+        }, 2000);
+    }
 
     function downloadImage() {
         const link = document.createElement("a");
