@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cartoonify AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 { margin-bottom: 10px; }
+
+        select, input, button {
+            margin-top: 15px;
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background: #5a67d8; }
+
+        .image-container {
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .image-container img {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .slider {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .loader {
+            display: none;
+            margin-top: 15px;
+            color: #667eea;
+        }
+
+        #downloadBtn {
+            display: none;
+            margin-top: 10px;
+            background: #38a169;
+        }
+
+        #downloadBtn:hover {
+            background: #2f855a;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h1>Cartoonify AI</h1>
+
+    <input type="file" id="upload" accept="image/*">
+
+    <select id="style">
+        <option value="flat">Flat Cartoon</option>
+        <option value="anime">Anime Style</option>
+        <option value="comic">Comic Book</option>
+    </select>
+
+    <button onclick="convertImage()">Convert to Cartoon</button>
+
+    <div class="loader" id="loader">Processing...</div>
+
+    <div class="image-container">
+        <img id="original">
+        <img id="cartoon" style="position:absolute; top:0; left:0; clip-path: inset(0 50% 0 0);">
+    </div>
+
+    <input type="range" min="0" max="100" value="50" class="slider" id="slider">
+
+    <button id="downloadBtn" onclick="downloadImage()">Download Cartoon</button>
+
+</div>
+
+<script>
+    const upload = document.getElementById("upload");
+    const original = document.getElementById("original");
+    const cartoon = document.getElementById("cartoon");
+    const loader = document.getElementById("loader");
+    const slider = document.getElementById("slider");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    upload.addEventListener("change", function() {
+        const file = upload.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            original.src = e.target.result;
+            cartoon.src = "";
+            downloadBtn.style.display = "none";
+        }
+        reader.readAsDataURL(file);
+    });
+
+    function convertImage() {
+        loader.style.display = "block";
+        setTimeout(() => {
+            loader.style.display = "none";
+            cartoon.src = original.src; // fake cartoon result
+            downloadBtn.style.display = "block";
+        }, 2000);
+    }
+
+    slider.addEventListener("input", function() {
+        cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
+    });
+
+    function downloadImage() {
+        const link = document.createElement("a");
+        link.href = cartoon.src;
+        link.download = "cartoon-image.png";
+        link.click();
+    }
+</script>
+
+</body>
+</html>
