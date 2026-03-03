@@ -115,15 +115,16 @@
     <button id="downloadBtn">Download Cartoon</button>
 </div>
 
-<!-- ✅ Proper ES Module Import -->
 <script type="module">
 
 import { SigningStargateClient } from "https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.32.3/+esm";
 
 const chainId = "raitestnet_77701-1";
-const recipient = "YOUR_WALLET_ADDRESS";  // 🔥 PUT YOUR TESTNET WALLET
-const amount = "1000";  // 0.001 ARAI (6 decimals)
-const rpcEndpoint = "YOUR_RPC_ENDPOINT";  // 🔥 PUT REAL RPC
+
+/* 🔥 IMPORTANT: Replace these with real values */
+const rpcEndpoint = "YOUR_RPC_ENDPOINT";
+const recipient = "YOUR_WALLET_ADDRESS";
+const amount = "1000"; // 0.001 ARAI (6 decimals)
 
 const upload = document.getElementById("upload");
 const original = document.getElementById("original");
@@ -137,9 +138,8 @@ const walletAddressText = document.getElementById("walletAddress");
 
 let userAddress = null;
 
-/* =========================
-   Image Preview
-========================= */
+/* ================= IMAGE PREVIEW ================= */
+
 upload.addEventListener("change", function() {
     const file = upload.files[0];
     const reader = new FileReader();
@@ -155,17 +155,50 @@ slider.addEventListener("input", function() {
     cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
 });
 
-/* =========================
-   Connect Wallet
-========================= */
+/* ================= CONNECT WALLET ================= */
+
 connectBtn.addEventListener("click", async () => {
+
     if (!window.keplr) {
         alert("Please install Keplr extension");
         return;
     }
 
     try {
+        // 🔥 Auto-add chain to Keplr
+        await window.keplr.experimentalSuggestChain({
+            chainId: chainId,
+            chainName: "RAI Testnet",
+            rpc: rpcEndpoint,
+            rest: rpcEndpoint,
+            bip44: { coinType: 118 },
+            bech32Config: {
+                bech32PrefixAccAddr: "rai",
+                bech32PrefixAccPub: "raipub",
+                bech32PrefixValAddr: "raivaloper",
+                bech32PrefixValPub: "raivaloperpub",
+                bech32PrefixConsAddr: "raivalcons",
+                bech32PrefixConsPub: "raivalconspub",
+            },
+            currencies: [{
+                coinDenom: "ARAI",
+                coinMinimalDenom: "arai",
+                coinDecimals: 6,
+            }],
+            feeCurrencies: [{
+                coinDenom: "ARAI",
+                coinMinimalDenom: "arai",
+                coinDecimals: 6,
+            }],
+            stakeCurrency: {
+                coinDenom: "ARAI",
+                coinMinimalDenom: "arai",
+                coinDecimals: 6,
+            },
+        });
+
         await window.keplr.enable(chainId);
+
         const offlineSigner = window.getOfflineSigner(chainId);
         const accounts = await offlineSigner.getAccounts();
 
@@ -182,9 +215,8 @@ connectBtn.addEventListener("click", async () => {
     }
 });
 
-/* =========================
-   Pay & Convert
-========================= */
+/* ================= PAY & CONVERT ================= */
+
 payBtn.addEventListener("click", async () => {
 
     if (!userAddress) {
@@ -199,6 +231,7 @@ payBtn.addEventListener("click", async () => {
 
     try {
         const offlineSigner = window.getOfflineSigner(chainId);
+
         const client = await SigningStargateClient.connectWithSigner(
             rpcEndpoint,
             offlineSigner
@@ -230,10 +263,10 @@ payBtn.addEventListener("click", async () => {
     }
 });
 
-/* =========================
-   Backend Call
-========================= */
+/* ================= BACKEND ================= */
+
 async function convertImage() {
+
     loader.style.display = "block";
 
     const file = upload.files[0];
@@ -248,7 +281,6 @@ async function convertImage() {
 
         const blob = await response.blob();
         cartoon.src = URL.createObjectURL(blob);
-
         downloadBtn.style.display = "block";
 
     } catch (error) {
@@ -259,9 +291,8 @@ async function convertImage() {
     loader.style.display = "none";
 }
 
-/* =========================
-   Download
-========================= */
+/* ================= DOWNLOAD ================= */
+
 downloadBtn.addEventListener("click", () => {
     const link = document.createElement("a");
     link.href = cartoon.src;
