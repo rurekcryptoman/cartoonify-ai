@@ -201,15 +201,31 @@
         }
     }
 
-    function convertImage() {
-        loader.style.display = "block";
+   async function convertImage() {
+    loader.style.display = "block";
 
-        setTimeout(() => {
-            loader.style.display = "none";
-            cartoon.src = original.src; // fake cartoon result for now
-            downloadBtn.style.display = "block";
-        }, 2000);
+    const file = upload.files[0];
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch("https://YOUR-BACKEND-URL/cartoonify/", {
+            method: "POST",
+            body: formData
+        });
+
+        const blob = await response.blob();
+        cartoon.src = URL.createObjectURL(blob);
+
+        downloadBtn.style.display = "block";
+    } catch (error) {
+        alert("Backend error. Please try again.");
+        console.error(error);
     }
+
+    loader.style.display = "none";
+}
 
     function downloadImage() {
         const link = document.createElement("a");
@@ -221,6 +237,7 @@
 
 </body>
 </html>
+
 
 
 
