@@ -4,8 +4,6 @@
     <title>Cartoonify AI - Web3</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <script src="https://unpkg.com/@cosmjs/stargate/build/index.js"></script>
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -98,12 +96,12 @@
 <div class="card">
     <h1>Cartoonify AI</h1>
 
-    <button onclick="connectWallet()">Connect Wallet</button>
+    <button id="connectBtn">Connect Wallet</button>
     <p id="walletAddress"></p>
 
     <input type="file" id="upload" accept="image/*">
 
-    <button onclick="payAndConvert()">Pay & Convert (0.001 ARAI)</button>
+    <button id="payBtn">Pay & Convert (0.001 ARAI)</button>
 
     <div class="loader" id="loader">Processing...</div>
 
@@ -114,66 +112,92 @@
 
     <input type="range" min="0" max="100" value="50" class="slider" id="slider">
 
-    <button id="downloadBtn" onclick="downloadImage()">Download Cartoon</button>
+    <button id="downloadBtn">Download Cartoon</button>
 </div>
 
-<script>
-    const chainId = "raitestnet_77701-1"; // confirm if different
-    const recipient = "YOUR_WALLET_ADDRESS"; // replace with your testnet wallet
-    const amount = "1000"; // 0.1 ARAI (6 decimals assumed)
-    const rpcEndpoint = "YOUR_RPC_ENDPOINT"; // replace with real RPC
+<!-- ✅ Proper ES Module Import -->
+<script type="module">
 
-    const upload = document.getElementById("upload");
-    const original = document.getElementById("original");
-    const cartoon = document.getElementById("cartoon");
-    const loader = document.getElementById("loader");
-    const slider = document.getElementById("slider");
-    const downloadBtn = document.getElementById("downloadBtn");
+import { SigningStargateClient } from "https://cdn.jsdelivr.net/npm/@cosmjs/stargate@0.32.3/+esm";
 
-    upload.addEventListener("change", function() {
-        const file = upload.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            original.src = e.target.result;
-            cartoon.src = "";
-            downloadBtn.style.display = "none";
-        }
-        reader.readAsDataURL(file);
-    });
+const chainId = "raitestnet_77701-1";
+const recipient = "YOUR_WALLET_ADDRESS";  // 🔥 PUT YOUR TESTNET WALLET
+const amount = "1000";  // 0.001 ARAI (6 decimals)
+const rpcEndpoint = "YOUR_RPC_ENDPOINT";  // 🔥 PUT REAL RPC
 
-    slider.addEventListener("input", function() {
-        cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
-    });
+const upload = document.getElementById("upload");
+const original = document.getElementById("original");
+const cartoon = document.getElementById("cartoon");
+const loader = document.getElementById("loader");
+const slider = document.getElementById("slider");
+const downloadBtn = document.getElementById("downloadBtn");
+const connectBtn = document.getElementById("connectBtn");
+const payBtn = document.getElementById("payBtn");
+const walletAddressText = document.getElementById("walletAddress");
 
-async function connectWallet() {
+let userAddress = null;
+
+/* =========================
+   Image Preview
+========================= */
+upload.addEventListener("change", function() {
+    const file = upload.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        original.src = e.target.result;
+        cartoon.src = "";
+        downloadBtn.style.display = "none";
+    }
+    reader.readAsDataURL(file);
+});
+
+slider.addEventListener("input", function() {
+    cartoon.style.clipPath = `inset(0 ${100 - slider.value}% 0 0)`;
+});
+
+/* =========================
+   Connect Wallet
+========================= */
+connectBtn.addEventListener("click", async () => {
     if (!window.keplr) {
         alert("Please install Keplr extension");
         return;
     }
 
-    await window.keplr.enable(chainId);
-    const offlineSigner = window.getOfflineSigner(chainId);
-    const accounts = await offlineSigner.getAccounts();
+    try {
+        await window.keplr.enable(chainId);
+        const offlineSigner = window.getOfflineSigner(chainId);
+        const accounts = await offlineSigner.getAccounts();
 
-    window.userAddress = accounts[0].address;
+        userAddress = accounts[0].address;
 
-    // Change button text
-    const connectBtn = document.querySelector("button[onclick='connectWallet()']");
-    connectBtn.innerText = "Wallet Connected ✅";
-    connectBtn.style.background = "#38a169"; // green
+        connectBtn.innerText = "Wallet Connected ✅";
+        connectBtn.style.background = "#38a169";
 
-    document.getElementById("walletAddress").innerText =
-        "Connected: " + accounts[0].address;
-}
+        walletAddressText.innerText = "Connected: " + userAddress;
 
-    async function payAndConvert() {
-        if (!window.userAddress) {
-            alert("Connect wallet first!");
-            return;
-        }
+    } catch (error) {
+        console.error(error);
+        alert("Wallet connection failed");
+    }
+});
 
-        const { SigningStargateClient } = cosmjs;
+/* =========================
+   Pay & Convert
+========================= */
+payBtn.addEventListener("click", async () => {
 
+    if (!userAddress) {
+        alert("Connect wallet first!");
+        return;
+    }
+
+    if (!upload.files[0]) {
+        alert("Upload an image first!");
+        return;
+    }
+
+    try {
         const offlineSigner = window.getOfflineSigner(chainId);
         const client = await SigningStargateClient.connectWithSigner(
             rpcEndpoint,
@@ -185,32 +209,34 @@ async function connectWallet() {
             gas: "200000",
         };
 
-        try {
-            const result = await client.sendTokens(
-                window.userAddress,
-                recipient,
-                [{ denom: "arai", amount: amount }],
-                fee,
-                "Cartoon conversion payment"
-            );
+        const result = await client.sendTokens(
+            userAddress,
+            recipient,
+            [{ denom: "arai", amount: amount }],
+            fee,
+            "Cartoon conversion payment"
+        );
 
-            if (result.code === 0) {
-                alert("Transaction successful! 🎉");
-                convertImage();
-            } else {
-                alert("Transaction failed");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Transaction rejected");
+        if (result.code === 0) {
+            alert("Transaction successful! 🎉");
+            convertImage();
+        } else {
+            alert("Transaction failed");
         }
-    }
 
-   async function convertImage() {
+    } catch (error) {
+        console.error(error);
+        alert("Transaction rejected or failed");
+    }
+});
+
+/* =========================
+   Backend Call
+========================= */
+async function convertImage() {
     loader.style.display = "block";
 
     const file = upload.files[0];
-
     const formData = new FormData();
     formData.append("file", file);
 
@@ -224,6 +250,7 @@ async function connectWallet() {
         cartoon.src = URL.createObjectURL(blob);
 
         downloadBtn.style.display = "block";
+
     } catch (error) {
         alert("Backend error. Please try again.");
         console.error(error);
@@ -232,19 +259,17 @@ async function connectWallet() {
     loader.style.display = "none";
 }
 
-    function downloadImage() {
-        const link = document.createElement("a");
-        link.href = cartoon.src;
-        link.download = "cartoon-image.png";
-        link.click();
-    }
+/* =========================
+   Download
+========================= */
+downloadBtn.addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.href = cartoon.src;
+    link.download = "cartoon-image.png";
+    link.click();
+});
+
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
